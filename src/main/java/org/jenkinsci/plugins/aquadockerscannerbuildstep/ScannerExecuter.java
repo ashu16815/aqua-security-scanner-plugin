@@ -6,9 +6,12 @@ import hudson.Launcher.ProcStarter;
 import hudson.FilePath;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder ;
 import java.io.File;
 import java.io.PrintStream;
+import src.main.java.org.jenkinsci.plugins.aquadockerscannerbuildstep.AquaDockerScannerBuilder;
 
 /**
  * This class does the actual execution..
@@ -17,9 +20,9 @@ import java.io.PrintStream;
  */
 public class ScannerExecuter {
     
-    public static int execute(AbstractBuild build,
+    public static int execute(Run build,
 			      Launcher launcher,
-			      BuildListener listener,
+			      TaskListener listener,
 			      String artifactName,
 			      String aquaScannerImage,
 			      String apiURL,
@@ -34,7 +37,7 @@ public class ScannerExecuter {
 			      boolean hideBase,
 			      boolean showNegligible,
 			      boolean checkonly,
-			      String notCompliesCmd) {
+			      String notCompliesCmd, FilePath workspace) {
 
 	PrintStream print_stream = null;
 	try {
@@ -94,7 +97,7 @@ public class ScannerExecuter {
 	    int exitCode = ps.join();  // RUN !
 
 	    // Copy local file to workspace FilePath object (which might be on remote machine)
-	    FilePath workspace = build.getWorkspace();
+	    //FilePath workspace = build.getWorkspace();
 	    FilePath target = new FilePath(workspace, artifactName);
 	    FilePath outFilePath = new FilePath(outFile);
 	    outFilePath.copyTo(target);   

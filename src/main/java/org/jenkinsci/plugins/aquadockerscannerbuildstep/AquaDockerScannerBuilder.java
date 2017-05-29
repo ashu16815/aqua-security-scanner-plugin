@@ -1,14 +1,18 @@
-package org.jenkinsci.plugins.aquadockerscannerbuildstep;
+package src.main.java.org.jenkinsci.plugins.aquadockerscannerbuildstep;
+
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.Launcher;
 import hudson.Extension;
-import hudson.util.FormValidation;
-import hudson.model.AbstractBuild;
+import hudson.FilePath;
 import hudson.model.AbstractProject;
+import hudson.util.FormValidation;
+import hudson.model.Run;
+
+import hudson.model.TaskListener;
 import hudson.tasks.Builder;
-import hudson.model.BuildListener;
+
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.BuildStepDescriptor;
 import net.sf.json.JSONObject;
@@ -18,6 +22,7 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
+import jenkins.tasks.SimpleBuildStep;
 
 /**
  * This is the builder class.
@@ -26,7 +31,7 @@ import java.io.IOException;
  *
  * @author Moshe Cohen
  */
-public class AquaDockerScannerBuilder extends Builder {
+public class AquaDockerScannerBuilder extends Builder implements SimpleBuildStep {
 
     public static final int OK_CODE = 0;
     public static final int DISALLOWED_CODE = 4;
@@ -119,7 +124,7 @@ public class AquaDockerScannerBuilder extends Builder {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener)
+    public void perform(Run build, FilePath workspace, Launcher launcher, TaskListener listener)
 	throws AbortException, java.lang.InterruptedException {
 	// This is where you 'build' the project.
 
@@ -132,7 +137,7 @@ public class AquaDockerScannerBuilder extends Builder {
 
 	if (apiURL == null || apiURL.trim().equals("") || user == null || user.trim().equals("") || password == null || password.trim().equals("")) {
 	    listener.getLogger().println("\nERROR: Missing configuration. Please set the global configuration parameters in The \"Aqua Security\" section under  \"Manage Jenkins/Configure System\", before continuing.\n");
-	    return false;
+	    return ;
 	}
 
 	// Allow API urls without the protocol part, add the "https://" in this case
@@ -159,16 +164,16 @@ public class AquaDockerScannerBuilder extends Builder {
 					       locationType, localImage, registry, hostedImage,
 					       hideBase, showNegligible,
 					       onDisallowed == null || ! onDisallowed.equals("fail"),
-					       notCompliesCmd);
+					       notCompliesCmd, workspace);
 	build.addAction(new AquaScannerAction(build, artifactSuffix, artifactName));
 
-	archiveArtifacts(build, launcher, listener);
+	archiveArtifacts(build, workspace, launcher, listener);
 
 	switch (exitCode) {
 	case OK_CODE:
-	    return true;
+	    return ;
 	case DISALLOWED_CODE:
-	    return false;
+	    return ;
 	default:
 	    // This exception causes the message to appear in the Jenkins console
 	    throw new AbortException("Scanning failed.");
@@ -177,10 +182,10 @@ public class AquaDockerScannerBuilder extends Builder {
 
     // Archive all artifacts
     @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE") // No idea why this is needed
-    private void archiveArtifacts(AbstractBuild build, Launcher launcher, BuildListener listener) 
+    private void archiveArtifacts(Run build, FilePath workspace, Launcher launcher, TaskListener listener) 
 	throws java.lang.InterruptedException {
 	ArtifactArchiver artifactArchiver = new ArtifactArchiver("*");
-	artifactArchiver.perform(build, build.getWorkspace(), launcher, listener);
+	artifactArchiver.perform(build, workspace, launcher, listener);
     }
 
     // Overridden for better type safety.
@@ -213,6 +218,7 @@ public class AquaDockerScannerBuilder extends Builder {
          * call load() in the constructor.
          */
         public DescriptorImpl() {
+            System.out.println("\n*****ankit:COnstructor Loaded\n");
             load();
         }
 
@@ -233,11 +239,8 @@ public class AquaDockerScannerBuilder extends Builder {
 		return FormValidation.error("Must be a number");
 	    }
 	}
+        
 
-        public boolean isApplicable(Class<? extends AbstractProject> aClass) {
-            // Indicates that this builder can be used with all kinds of project types 
-            return true;
-        }
 
         /**
          * This human readable name is used in the configuration screen.
@@ -250,6 +253,7 @@ public class AquaDockerScannerBuilder extends Builder {
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             // To persist global configuration information,
             // set that to properties and call save().
+            System.out.println("\n*****ankit:Fordata saving started");
             aquaScannerImage = formData.getString("aquaScannerImage");
             apiURL = formData.getString("apiURL");
             user = formData.getString("user");
@@ -282,6 +286,12 @@ public class AquaDockerScannerBuilder extends Builder {
         public String getRunOptions() {
             return runOptions;
         }
+         @Override
+        public boolean isApplicable(Class<? extends AbstractProject> jobType) {
+            System.out.println("\n*****ankit:isApplicable");
+            return true;
+        }
+       
     }
 }
 
